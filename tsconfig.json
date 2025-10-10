@@ -1,15 +1,13 @@
 {
   "compilerOptions": {
-    "target": "ES2022",                    /* Versión moderna de JS que compilará */
-    "module": "NodeNext",                  /* Soporta imports/exports de ESM */
-    "moduleResolution": "NodeNext",        /* Resolver módulos al estilo ESM */
-    "esModuleInterop": true,               /* Permite usar imports de CommonJS */
-    "forceConsistentCasingInFileNames": true,
-    "strict": true,                        /* Reglas estrictas de TypeScript */
-    "skipLibCheck": true,                  /* Ignora chequeo de types internos */
-    "outDir": "./dist",                    /* Carpeta de salida del JS compilado */
-    "rootDir": "./src"                     /* Carpeta principal del código fuente */
+    "target": "ES2020",
+    "module": "CommonJS",
+    "rootDir": "api",
+    "outDir": "dist",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
   },
-  "include": ["src"],                      /* Solo compila lo que esté en /src */
-  "exclude": ["node_modules"]              /* Ignora dependencias */
+  "include": ["api/**/*"]
 }
