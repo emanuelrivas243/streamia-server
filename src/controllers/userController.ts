@@ -4,6 +4,9 @@ import { User } from "../models/User";
 import { sendPasswordResetEmail, sendWelcomeEmail } from "../utils/emailService";
 import { generateResetToken, generateToken, getResetTokenExpiration, hashResetToken, isExpired } from "../utils/helpers";
 import { forgotPasswordSchema, loginSchema, registerSchema, resetPasswordSchema, updateProfileSchema } from "../utils/validators";
+import crypto from "crypto";
+import { sendMail } from "../utils/mailer"; // <-- asegúrate de este import
+
 
 /**
  * Register a new user.
@@ -268,43 +271,49 @@ export const deleteUserAccount = async (req: Request, res: Response): Promise<vo
  * Body: { email }
  */
 export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+  const { email } = req.body;
+
   try {
-    // Validate input
-    const validation = forgotPasswordSchema.safeParse(req.body);
-    if (!validation.success) {
-      res.status(400).json({ error: "Validation error", details: validation.error.flatten() });
-      return;
-    }
-
-    const { email } = validation.data;
-
-    // Find user (don't reveal if email exists for security)
     const user = await User.findOne({ email });
+
     if (!user) {
-      res.status(202).json({ message: "Revisa tu correo para continuar" });
+      res.status(400).json({ error: "No existe un usuario con este correo" });
       return;
     }
 
-    // Generate reset token
-    const resetToken = generateResetToken();
-    const hashedToken = hashResetToken(resetToken);
-    const expiresAt = getResetTokenExpiration();
+    // Generar token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
 
-    // Save token and expiration to DB
     user.passwordResetToken = hashedToken;
-    user.passwordResetExpires = expiresAt;
-    await user.save();
+    user.passwordResetExpires = new Date(Date.now() + 3600000); // 1 hora
+    await user.save({ validateBeforeSave: false });
 
-    // Create reset link
-    const resetLink = `${process.env.ORIGIN?.split(",")[0]}/reset?token=${resetToken}`;
+    // URL del frontend
+    const resetURL = `http://localhost:3000/reset-password/${resetToken}`;
 
-    // Send email
-    await sendPasswordResetEmail(email, resetLink);
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>Restablecimiento de contraseña</h2>
+        <p>Hola ${user.firstName},</p>
+        <p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace:</p>
+        <a href="${resetURL}" target="_blank" style="color: #007bff;">
+          ${resetURL}
+        </a>
+        <p>Si no solicitaste este cambio, ignora este mensaje.</p>
+      </div>
+    `;
 
-    res.status(200).json({ message: "Revisa tu correo para continuar" });
+    await sendMail(
+      user.email,
+      "Restablece tu contraseña",
+      htmlContent
+    );
+
+    res.status(200).json({ message: "Correo enviado para restablecer la contraseña" });
   } catch (error) {
-    console.error("❌ Error in forgotPassword:", error);
-    res.status(500).json({ error: "Inténtalo de nuevo más tarde" });
+    console.error("Error en forgotPassword:", error);
+    res.status(500).json({ error: "Error al procesar la solicitud" });
   }
 };
 
@@ -315,7 +324,6 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
  */
 export const resetPassword = async (req: Request, res: Response): Promise<void> => {
   try {
-    // Validate input
     const validation = resetPasswordSchema.safeParse(req.body);
     if (!validation.success) {
       res.status(400).json({ error: "Validation error", details: validation.error.flatten() });
@@ -324,37 +332,32 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
 
     const { token, newPassword } = validation.data;
 
-    // Hash the provided token to compare with DB
-    const hashedToken = hashResetToken(token);
+    // Hashear token recibido
+    const hashedToken = crypto
+      .createHash("sha256")
+      .update(token)
+      .digest("hex");
 
-    // Find user with reset token
+    // Buscar usuario con token válido
     const user = await User.findOne({
       passwordResetToken: hashedToken,
-    }).select("+passwordResetToken +passwordResetExpires");
+      passwordResetExpires: { $gt: new Date() },
+    }).select("+passwordResetToken +passwordResetExpires +password");
 
     if (!user) {
-      res.status(400).json({ error: "Enlace inválido o caducado" });
+      res.status(400).json({ error: "Token inválido o expirado" });
       return;
     }
 
-    // Check if token has expired
-    if (user.passwordResetExpires && isExpired(user.passwordResetExpires)) {
-      res.status(400).json({ error: "Enlace inválido o caducado" });
-      return;
-    }
-
-    // Hash new password
-    const hashedPassword = await bcryptjs.hash(newPassword, 10);
-
-    // Update password and clear reset token
-    user.password = hashedPassword;
+    // Actualizar contraseña
+    user.password = await bcryptjs.hash(newPassword, 10);
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
     await user.save();
 
-    res.status(200).json({ message: "Contraseña actualizada" });
+    res.status(200).json({ message: "Contraseña actualizada con éxito" });
   } catch (error) {
-    console.error("❌ Error in resetPassword:", error);
-    res.status(500).json({ error: "Inténtalo de nuevo más tarde" });
+    console.error("Error en resetPassword:", error);
+    res.status(500).json({ error: "Error al restablecer la contraseña" });
   }
 };
