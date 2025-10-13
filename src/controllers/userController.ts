@@ -18,7 +18,7 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
     // Validate input
     const validation = registerSchema.safeParse(req.body);
     if (!validation.success) {
-      res.status(400).json({ error: "Validation error", details: validation.error.flatten() });
+      res.status(400).json({ error: "Error de validación", details: validation.error.flatten() });
       return;
     }
 
@@ -27,7 +27,7 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      res.status(409).json({ error: "Este correo ya está registrado" });
+      res.status(409).json({ error: "Este correo ya está registrado." });
       return;
     }
 
@@ -45,11 +45,11 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
 
     // Send welcome email (non-blocking)
     sendWelcomeEmail(email, firstName).catch((err) =>
-      console.error("Error sending welcome email:", err)
+      console.error("Error al enviar el correo electrónico de bienvenida:", err)
     );
 
     res.status(201).json({
-      message: "Cuenta creada con éxito",
+      message: "Cuenta creada con éxito.",
       user: {
         id: newUser._id,
         firstName: newUser.firstName,
@@ -58,8 +58,8 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
       },
     });
   } catch (error) {
-    console.error("❌ Error in registerUser:", error);
-    res.status(500).json({ error: "Inténtalo de nuevo más tarde" });
+    console.error("❌ Error en registerUser:", error);
+    res.status(500).json({ error: "Inténtalo de nuevo más tarde." });
   }
 };
 
@@ -73,7 +73,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
     // Validate input
     const validation = loginSchema.safeParse(req.body);
     if (!validation.success) {
-      res.status(400).json({ error: "Validation error", details: validation.error.flatten() });
+      res.status(400).json({ error: "Error de validación", details: validation.error.flatten() });
       return;
     }
 
@@ -82,14 +82,14 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
     // Find user and include password field
     const user = await User.findOne({ email }).select("+password");
     if (!user) {
-      res.status(401).json({ error: "Correo o contraseña inválidos" });
+      res.status(401).json({ error: "Correo o contraseña inválidos." });
       return;
     }
 
     // Compare passwords
     const isPasswordValid = await bcryptjs.compare(password, user.password);
     if (!isPasswordValid) {
-      res.status(401).json({ error: "Correo o contraseña inválidos" });
+      res.status(401).json({ error: "Correo o contraseña inválidos." });
       return;
     }
 
@@ -97,7 +97,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
     const token = generateToken(user._id.toString(), user.email);
 
     res.status(200).json({
-      message: "Login successful",
+      message: "Inicio de sesión correcto!",
       token,
       user: {
         id: user._id,
@@ -107,7 +107,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
       },
     });
   } catch (error) {
-    console.error("❌ Error in loginUser:", error);
+    console.error("❌ Error en loginUser:", error);
     res.status(500).json({ error: "Inténtalo de nuevo más tarde" });
   }
 };
@@ -118,10 +118,10 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
  */
 export const logoutUser = async (req: Request, res: Response): Promise<void> => {
   try {
-    res.status(200).json({ message: "Sesión cerrada correctamente" });
+    res.status(200).json({ message: "Sesión cerrada correctamente." });
   } catch (error) {
-    console.error("❌ Error in logoutUser:", error);
-    res.status(500).json({ error: "Inténtalo de nuevo más tarde" });
+    console.error("❌ Error en logoutUser:", error);
+    res.status(500).json({ error: "Inténtalo de nuevo más tarde." });
   }
 };
 
@@ -132,13 +132,13 @@ export const logoutUser = async (req: Request, res: Response): Promise<void> => 
 export const getUserProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.userId) {
-      res.status(401).json({ error: "Unauthorized" });
+      res.status(401).json({ error: "No autorizado" });
       return;
     }
 
     const user = await User.findById(req.userId);
     if (!user) {
-      res.status(404).json({ error: "Usuario no encontrado" });
+      res.status(404).json({ error: "Usuario no encontrado." });
       return;
     }
 
@@ -153,8 +153,8 @@ export const getUserProfile = async (req: Request, res: Response): Promise<void>
       },
     });
   } catch (error) {
-    console.error("❌ Error in getUserProfile:", error);
-    res.status(500).json({ error: "No pudimos obtener tu perfil" });
+    console.error("❌ Error en getUserProfile:", error);
+    res.status(500).json({ error: "No pudimos obtener tu perfil." });
   }
 };
 
@@ -166,14 +166,14 @@ export const getUserProfile = async (req: Request, res: Response): Promise<void>
 export const updateUserProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.userId) {
-      res.status(401).json({ error: "Unauthorized" });
+      res.status(401).json({ error: "No autorizado" });
       return;
     }
 
     // Validate input
     const validation = updateProfileSchema.safeParse(req.body);
     if (!validation.success) {
-      res.status(400).json({ error: "Validation error", details: validation.error.flatten() });
+      res.status(400).json({ error: "Error de validación", details: validation.error.flatten() });
       return;
     }
 
@@ -183,7 +183,7 @@ export const updateUserProfile = async (req: Request, res: Response): Promise<vo
     if (email) {
       const existingUser = await User.findOne({ email });
       if (existingUser && existingUser._id.toString() !== req.userId) {
-        res.status(409).json({ error: "Este correo ya está registrado" });
+        res.status(409).json({ error: "Este correo ya está registrado." });
         return;
       }
     }
@@ -201,12 +201,12 @@ export const updateUserProfile = async (req: Request, res: Response): Promise<vo
     );
 
     if (!updatedUser) {
-      res.status(404).json({ error: "Usuario no encontrado" });
+      res.status(404).json({ error: "Usuario no encontrado." });
       return;
     }
 
     res.status(200).json({
-      message: "Perfil actualizado",
+      message: "Perfil actualizado.",
       user: {
         id: updatedUser._id,
         firstName: updatedUser.firstName,
@@ -217,8 +217,8 @@ export const updateUserProfile = async (req: Request, res: Response): Promise<vo
       },
     });
   } catch (error) {
-    console.error("❌ Error in updateUserProfile:", error);
-    res.status(500).json({ error: "Inténtalo de nuevo más tarde" });
+    console.error("❌ Error en updateUserProfile:", error);
+    res.status(500).json({ error: "Inténtalo de nuevo más tarde." });
   }
 };
 
@@ -230,21 +230,21 @@ export const updateUserProfile = async (req: Request, res: Response): Promise<vo
 export const deleteUserAccount = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.userId) {
-      res.status(401).json({ error: "Unauthorized" });
+      res.status(401).json({ error: "No Autorizado" });
       return;
     }
 
     const { password } = req.body;
 
     if (!password) {
-      res.status(400).json({ error: "Password is required" });
+      res.status(400).json({ error: "Se requiere contraseña." });
       return;
     }
 
     // Find user with password field
     const user = await User.findById(req.userId).select("+password");
     if (!user) {
-      res.status(404).json({ error: "Usuario no encontrado" });
+      res.status(404).json({ error: "Usuario no encontrado." });
       return;
     }
 

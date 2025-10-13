@@ -3,15 +3,15 @@ import nodemailer from "nodemailer";
 const transporter = nodemailer.createTransport({
   service: "Gmail",
   auth: {
-    user: process.env.EMAIL_USER || "emanuel.rivas@correounivalle.edu.co",
-    pass: process.env.EMAIL_PASS || "eqfyougybpsrvcal", // App Password si usas Gmail
+    user: process.env.EMAIL_USER, 
+    pass: process.env.EMAIL_PASS 
   },
 });
 
 export const sendMail = async (to: string, subject: string, html: string) => {
   try {
     await transporter.sendMail({
-      from: `"Soporte" <${process.env.EMAIL_USER || "emanuel.rivas@correounivalle.edu.co"}>`,
+      from: `"Soporte" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       html,
