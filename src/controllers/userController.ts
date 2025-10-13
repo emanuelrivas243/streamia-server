@@ -290,7 +290,9 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
     await user.save({ validateBeforeSave: false });
 
     // URL del frontend
-    const resetURL = `http://localhost:3000/reset-password/${resetToken}`;
+    const frontendURL = process.env.FRONTEND_URL || "http://localhost:3000";
+    const resetURL = `${frontendURL}/reset-password/${resetToken}`;
+
 
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; padding: 20px;">

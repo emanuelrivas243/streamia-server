@@ -18,15 +18,30 @@ const app = express();
  * If ORIGIN exists, it is parsed as a comma-separated list.
  * If it doesn't, allow all origins in development.
  */
-const allowedOrigins = process.env.ORIGIN?.split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
+const allowedOrigins = process.env.ORIGIN?.split(",").map(s => s.trim()).filter(Boolean);
 
 app.use(
-  allowedOrigins && allowedOrigins.length > 0
-    ? cors({ origin: allowedOrigins })
-    : cors()
+  cors({
+    origin: function(origin, callback) {
+      // Permitir requests sin origin (Postman, mobile, curl)
+      if (!origin) return callback(null, true);
+
+      // Si ORIGIN está definido, solo permitir esos
+      if (allowedOrigins && allowedOrigins.length > 0) {
+        if (allowedOrigins.includes(origin)) {
+          return callback(null, true);
+        } else {
+          return callback(new Error("CORS policy: Origin not allowed"));
+        }
+      }
+
+      // Si no hay ORIGIN definido, permitir todo
+      return callback(null, true);
+    },
+    credentials: true,
+  })
 );
+
 
 /**
  * Global middleware
