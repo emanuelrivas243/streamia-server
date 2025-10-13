@@ -1,5 +1,5 @@
 {
-  "name": "crunchy-eisc-backend",
+  "name": "streamia-server",
   "version": "0.1.0",
   "scripts": {
     "dev": "tsx watch api/index.ts",
