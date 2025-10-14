@@ -9,10 +9,28 @@ import { sendMail } from "../utils/mailer";
 
 
 /**
- * Register a new user.
+ * Registers a new user.
  * POST /api/users/register
- * Body: { firstName, lastName, age, email, password, confirmPassword }
+ *
+ * Validates the input data, checks if the email is already in use,
+ * hashes the password, creates the user, and sends a welcome email.
+ *
+ * @param {Request} req - Express HTTP request object. The `req.body` should include:
+ *   - firstName {string} - User's first name.
+ *   - lastName {string} - User's last name.
+ *   - age {number} - User's age.
+ *   - email {string} - User's email address.
+ *   - password {string} - User's password.
+ *   - confirmPassword {string} - Confirmation of the password.
+ * @param {Response} res - Express HTTP response object.
+ *
+ * @returns {Promise<void>} Does not return a value. Sends the HTTP response directly.
+ *
+ * @throws {400} Validation error if the input data does not match the schema.
+ * @throws {409} If the email is already registered.
+ * @throws {500} Internal server error.
  */
+
 export const registerUser = async (req: Request, res: Response): Promise<void> => {
   try {
     // Validate input
@@ -54,6 +72,7 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
         id: newUser._id,
         firstName: newUser.firstName,
         lastName: newUser.lastName,
+        age: newUser.age,
         email: newUser.email,
       },
     });
@@ -63,11 +82,26 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
   }
 };
 
+
 /**
- * Login user and return JWT token.
+ * Logs in a user and returns a JWT token.
  * POST /api/users/login
- * Body: { email, password }
+ *
+ * Validates the input data, checks the user's credentials,
+ * and returns a JWT token if authentication is successful.
+ *
+ * @param {Request} req - Express HTTP request object. The `req.body` should include:
+ *   - email {string} - User's email address.
+ *   - password {string} - User's password.
+ * @param {Response} res - Express HTTP response object.
+ *
+ * @returns {Promise<void>} Does not return a value. Sends the HTTP response directly.
+ *
+ * @throws {400} Validation error if the input data does not match the schema.
+ * @throws {401} If email or password is incorrect.
+ * @throws {500} Internal server error.
  */
+
 export const loginUser = async (req: Request, res: Response): Promise<void> => {
   try {
     // Validate input
@@ -103,6 +137,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
         id: user._id,
         firstName: user.firstName,
         lastName: user.lastName,
+        age: user.age,
         email: user.email,
       },
     });
@@ -112,10 +147,19 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+
 /**
- * Logout user (frontend removes token).
+ * Logs out a user (frontend should remove the token).
  * POST /api/users/logout
+ *
+ * @param {Request} req - Express HTTP request object.
+ * @param {Response} res - Express HTTP response object.
+ *
+ * @returns {Promise<void>} Sends a success message.
+ *
+ * @throws {500} Internal server error.
  */
+
 export const logoutUser = async (req: Request, res: Response): Promise<void> => {
   try {
     res.status(200).json({ message: "Created session succesfully." });
@@ -125,10 +169,23 @@ export const logoutUser = async (req: Request, res: Response): Promise<void> => 
   }
 };
 
+
 /**
- * Get user profile (requires authentication).
+ * Retrieves the authenticated user's profile.
  * GET /api/users/me
+ *
+ * Requires authentication. The `req.userId` must be set (e.g., via middleware after verifying a JWT).
+ *
+ * @param {Request} req - Express HTTP request object. Must include `req.userId` from authentication middleware.
+ * @param {Response} res - Express HTTP response object.
+ *
+ * @returns {Promise<void>} Sends the user's profile in the response.
+ *
+ * @throws {401} If the user is not authenticated (missing `req.userId`).
+ * @throws {404} If the user is not found in the database.
+ * @throws {500} Internal server error.
  */
+
 export const getUserProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.userId) {
@@ -223,10 +280,29 @@ export const updateUserProfile = async (req: Request, res: Response): Promise<vo
 };
 
 /**
- * Delete user account (requires authentication).
- * DELETE /api/users/me
- * Body: { password }
+ * Updates the authenticated user's profile.
+ * PUT /api/users/me
+ *
+ * Requires authentication. The `req.userId` must be set (e.g., via middleware after verifying a JWT).
+ * Only the provided fields in `req.body` will be updated.
+ *
+ * @param {Request} req - Express HTTP request object. Must include `req.userId` from authentication middleware.
+ *                        The `req.body` can include the following optional fields:
+ *   - firstName {string} - New first name.
+ *   - lastName {string} - New last name.
+ *   - age {number} - New age.
+ *   - email {string} - New email address (must be unique).
+ * @param {Response} res - Express HTTP response object.
+ *
+ * @returns {Promise<void>} Sends a success message with the updated user profile.
+ *
+ * @throws {400} Validation error if the input data does not match the schema.
+ * @throws {401} If the user is not authenticated (missing `req.userId`).
+ * @throws {404} If the user is not found in the database.
+ * @throws {409} If the new email is already in use by another user.
+ * @throws {500} Internal server error.
  */
+
 export const deleteUserAccount = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.userId) {
@@ -266,10 +342,22 @@ export const deleteUserAccount = async (req: Request, res: Response): Promise<vo
 };
 
 /**
- * Request password reset.
+ * Requests a password reset for a user.
  * POST /api/users/forgot-password
- * Body: { email }
+ *
+ * Generates a password reset token, saves it to the user record with an expiration time,
+ * and sends an email with a reset link to the user.
+ *
+ * @param {Request} req - Express HTTP request object. The `req.body` should include:
+ *   - email {string} - Email address of the user requesting a password reset.
+ * @param {Response} res - Express HTTP response object.
+ *
+ * @returns {Promise<void>} Sends a success message if the email was sent.
+ *
+ * @throws {400} If no user exists with the provided email address.
+ * @throws {500} Internal server error if there is a problem processing the request.
  */
+ 
 export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
   const { email } = req.body;
 
@@ -319,10 +407,24 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
 };
 
 /**
- * Reset password with token.
+ * Resets a user's password using a valid reset token.
  * POST /api/users/reset-password
- * Body: { token, newPassword, confirmPassword }
+ *
+ * Validates the input data, verifies the reset token, hashes the new password,
+ * and updates the user's password in the database.
+ *
+ * @param {Request} req - Express HTTP request object. The `req.body` should include:
+ *   - token {string} - The password reset token received by email.
+ *   - newPassword {string} - The new password to set.
+ *   - confirmPassword {string} - Confirmation of the new password.
+ * @param {Response} res - Express HTTP response object.
+ *
+ * @returns {Promise<void>} Sends a success message if the password was updated.
+ *
+ * @throws {400} Validation error if input data does not match the schema or token is invalid/expired.
+ * @throws {500} Internal server error if there is a problem updating the password.
  */
+
 export const resetPassword = async (req: Request, res: Response): Promise<void> => {
   try {
     const validation = resetPasswordSchema.safeParse(req.body);
@@ -346,7 +448,7 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
     }).select("+passwordResetToken +passwordResetExpires +password");
 
     if (!user) {
-      res.status(400).json({ error: "Token inválido o expirado" });
+      res.status(400).json({ error: "Expired or invalid token" });
       return;
     }
 
