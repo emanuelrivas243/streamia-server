@@ -1,7 +1,7 @@
 import bcryptjs from "bcryptjs";
 import { Request, Response } from "express";
 import { User } from "../models/User";
-import { sendPasswordResetEmail, sendWelcomeEmail } from "../utils/emailService";
+import { sendWelcomeEmail } from "../utils/emailService";
 import { generateResetToken, generateToken, getResetTokenExpiration, hashResetToken, isExpired } from "../utils/helpers";
 import { forgotPasswordSchema, loginSchema, registerSchema, resetPasswordSchema, updateProfileSchema } from "../utils/validators";
 import crypto from "crypto";
