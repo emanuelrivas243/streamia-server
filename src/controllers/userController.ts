@@ -5,7 +5,7 @@ import { sendPasswordResetEmail, sendWelcomeEmail } from "../utils/emailService"
 import { generateResetToken, generateToken, getResetTokenExpiration, hashResetToken, isExpired } from "../utils/helpers";
 import { forgotPasswordSchema, loginSchema, registerSchema, resetPasswordSchema, updateProfileSchema } from "../utils/validators";
 import crypto from "crypto";
-import { sendMail } from "../utils/mailer"; // <-- asegúrate de este import
+import { sendMail } from "../utils/mailer";
 
 
 /**
@@ -18,7 +18,7 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
     // Validate input
     const validation = registerSchema.safeParse(req.body);
     if (!validation.success) {
-      res.status(400).json({ error: "Error de validación", details: validation.error.flatten() });
+      res.status(400).json({ error: "Validation error", details: validation.error.flatten() });
       return;
     }
 
@@ -27,7 +27,7 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      res.status(409).json({ error: "Este correo ya está registrado." });
+      res.status(409).json({ error: "This email is already used" });
       return;
     }
 
@@ -45,11 +45,11 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
 
     // Send welcome email (non-blocking)
     sendWelcomeEmail(email, firstName).catch((err) =>
-      console.error("Error al enviar el correo electrónico de bienvenida:", err)
+      console.error("Error to send welcome email", err)
     );
 
     res.status(201).json({
-      message: "Cuenta creada con éxito.",
+      message: "Created account successfully.",
       user: {
         id: newUser._id,
         firstName: newUser.firstName,
@@ -58,8 +58,8 @@ export const registerUser = async (req: Request, res: Response): Promise<void> =
       },
     });
   } catch (error) {
-    console.error("❌ Error en registerUser:", error);
-    res.status(500).json({ error: "Inténtalo de nuevo más tarde." });
+    console.error("❌ Error in registerUser:", error);
+    res.status(500).json({ error: "Please try again later" });
   }
 };
 
@@ -73,7 +73,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
     // Validate input
     const validation = loginSchema.safeParse(req.body);
     if (!validation.success) {
-      res.status(400).json({ error: "Error de validación", details: validation.error.flatten() });
+      res.status(400).json({ error: "Validation error", details: validation.error.flatten() });
       return;
     }
 
@@ -82,14 +82,14 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
     // Find user and include password field
     const user = await User.findOne({ email }).select("+password");
     if (!user) {
-      res.status(401).json({ error: "Correo o contraseña inválidos." });
+      res.status(401).json({ error: "Email or password incorrect" });
       return;
     }
 
     // Compare passwords
     const isPasswordValid = await bcryptjs.compare(password, user.password);
     if (!isPasswordValid) {
-      res.status(401).json({ error: "Correo o contraseña inválidos." });
+      res.status(401).json({ error: "Email or password invalid" });
       return;
     }
 
@@ -97,7 +97,7 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
     const token = generateToken(user._id.toString(), user.email);
 
     res.status(200).json({
-      message: "Inicio de sesión correcto!",
+      message: "Login succesful!",
       token,
       user: {
         id: user._id,
@@ -107,8 +107,8 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
       },
     });
   } catch (error) {
-    console.error("❌ Error en loginUser:", error);
-    res.status(500).json({ error: "Inténtalo de nuevo más tarde" });
+    console.error("❌ Error in loginUser:", error);
+    res.status(500).json({ error: "Try again later" });
   }
 };
 
@@ -118,10 +118,10 @@ export const loginUser = async (req: Request, res: Response): Promise<void> => {
  */
 export const logoutUser = async (req: Request, res: Response): Promise<void> => {
   try {
-    res.status(200).json({ message: "Sesión cerrada correctamente." });
+    res.status(200).json({ message: "Created session succesfully." });
   } catch (error) {
-    console.error("❌ Error en logoutUser:", error);
-    res.status(500).json({ error: "Inténtalo de nuevo más tarde." });
+    console.error("❌ Error in logoutUser:", error);
+    res.status(500).json({ error: "Try again later." });
   }
 };
 
@@ -132,13 +132,13 @@ export const logoutUser = async (req: Request, res: Response): Promise<void> => 
 export const getUserProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.userId) {
-      res.status(401).json({ error: "No autorizado" });
+      res.status(401).json({ error: "Unauthorized" });
       return;
     }
 
     const user = await User.findById(req.userId);
     if (!user) {
-      res.status(404).json({ error: "Usuario no encontrado." });
+      res.status(404).json({ error: "User not found." });
       return;
     }
 
@@ -153,8 +153,8 @@ export const getUserProfile = async (req: Request, res: Response): Promise<void>
       },
     });
   } catch (error) {
-    console.error("❌ Error en getUserProfile:", error);
-    res.status(500).json({ error: "No pudimos obtener tu perfil." });
+    console.error("❌ Error in getUserProfile:", error);
+    res.status(500).json({ error: "We were unable to obtain your profile." });
   }
 };
 
@@ -166,14 +166,14 @@ export const getUserProfile = async (req: Request, res: Response): Promise<void>
 export const updateUserProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.userId) {
-      res.status(401).json({ error: "No autorizado" });
+      res.status(401).json({ error: "Unauthorized" });
       return;
     }
 
     // Validate input
     const validation = updateProfileSchema.safeParse(req.body);
     if (!validation.success) {
-      res.status(400).json({ error: "Error de validación", details: validation.error.flatten() });
+      res.status(400).json({ error: "Validation error", details: validation.error.flatten() });
       return;
     }
 
@@ -183,7 +183,7 @@ export const updateUserProfile = async (req: Request, res: Response): Promise<vo
     if (email) {
       const existingUser = await User.findOne({ email });
       if (existingUser && existingUser._id.toString() !== req.userId) {
-        res.status(409).json({ error: "Este correo ya está registrado." });
+        res.status(409).json({ error: "This email is already registered." });
         return;
       }
     }
@@ -201,12 +201,12 @@ export const updateUserProfile = async (req: Request, res: Response): Promise<vo
     );
 
     if (!updatedUser) {
-      res.status(404).json({ error: "Usuario no encontrado." });
+      res.status(404).json({ error: "User not found." });
       return;
     }
 
     res.status(200).json({
-      message: "Perfil actualizado.",
+      message: "Updated profile.",
       user: {
         id: updatedUser._id,
         firstName: updatedUser.firstName,
@@ -217,8 +217,8 @@ export const updateUserProfile = async (req: Request, res: Response): Promise<vo
       },
     });
   } catch (error) {
-    console.error("❌ Error en updateUserProfile:", error);
-    res.status(500).json({ error: "Inténtalo de nuevo más tarde." });
+    console.error("❌ Error in updateUserProfile:", error);
+    res.status(500).json({ error: "Please try again later." });
   }
 };
 
@@ -230,28 +230,28 @@ export const updateUserProfile = async (req: Request, res: Response): Promise<vo
 export const deleteUserAccount = async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.userId) {
-      res.status(401).json({ error: "No Autorizado" });
+      res.status(401).json({ error: "Unauthorized" });
       return;
     }
 
     const { password } = req.body;
 
     if (!password) {
-      res.status(400).json({ error: "Se requiere contraseña." });
+      res.status(400).json({ error: "Password required." });
       return;
     }
 
     // Find user with password field
     const user = await User.findById(req.userId).select("+password");
     if (!user) {
-      res.status(404).json({ error: "Usuario no encontrado." });
+      res.status(404).json({ error: "User Not Found." });
       return;
     }
 
     // Verify password
     const isPasswordValid = await bcryptjs.compare(password, user.password);
     if (!isPasswordValid) {
-      res.status(401).json({ error: "Contraseña incorrecta" });
+      res.status(401).json({ error: "Incorrect password" });
       return;
     }
 
@@ -261,7 +261,7 @@ export const deleteUserAccount = async (req: Request, res: Response): Promise<vo
     res.status(204).send();
   } catch (error) {
     console.error("❌ Error in deleteUserAccount:", error);
-    res.status(500).json({ error: "Inténtalo de nuevo más tarde" });
+    res.status(500).json({ error: "Please try again later" });
   }
 };
 
@@ -277,7 +277,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
     const user = await User.findOne({ email });
 
     if (!user) {
-      res.status(400).json({ error: "No existe un usuario con este correo" });
+      res.status(400).json({ error: "There is no user with this email address." });
       return;
     }
 
@@ -293,29 +293,28 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
     const frontendURL = process.env.FRONTEND_URL || "http://localhost:3000";
     const resetURL = `${frontendURL}/reset-password/${resetToken}`;
 
-
     const htmlContent = `
-      <div style="font-family: Arial, sans-serif; padding: 20px;">
-        <h2>Restablecimiento de contraseña</h2>
-        <p>Hola ${user.firstName},</p>
-        <p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace:</p>
-        <a href="${resetURL}" target="_blank" style="color: #007bff;">
-          ${resetURL}
-        </a>
-        <p>Si no solicitaste este cambio, ignora este mensaje.</p>
-      </div>
-    `;
+    <div style="font-family: Arial, sans-serif; padding: 20px;">
+      <h2>Password Reset</h2>
+      <p>Hello ${user.firstName},</p>
+      <p>You have requested to reset your password. Click the link below:</p>
+      <a href="${resetURL}" target="_blank" style="color: #007bff;">
+        ${resetURL}
+      </a>
+      <p>If you did not request this change, please ignore this message.</p>
+    </div>
+  `;
 
     await sendMail(
       user.email,
-      "Restablece tu contraseña",
+      "Reset your password",
       htmlContent
     );
 
-    res.status(200).json({ message: "Correo enviado para restablecer la contraseña" });
+    res.status(200).json({ message: "Email sent to reset password" });
   } catch (error) {
-    console.error("Error en forgotPassword:", error);
-    res.status(500).json({ error: "Error al procesar la solicitud" });
+    console.error("Error in forgotPassword:", error);
+    res.status(500).json({ error: "Error processing the request" });
   }
 };
 
@@ -334,13 +333,13 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
 
     const { token, newPassword } = validation.data;
 
-    // Hashear token recibido
+    // Hashing received token
     const hashedToken = crypto
       .createHash("sha256")
       .update(token)
       .digest("hex");
 
-    // Buscar usuario con token válido
+    // Search user with a valid token
     const user = await User.findOne({
       passwordResetToken: hashedToken,
       passwordResetExpires: { $gt: new Date() },
@@ -351,15 +350,15 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    // Actualizar contraseña
+    // Update password
     user.password = await bcryptjs.hash(newPassword, 10);
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
     await user.save();
 
-    res.status(200).json({ message: "Contraseña actualizada con éxito" });
+    res.status(200).json({ message: "Updated password succesfully" });
   } catch (error) {
-    console.error("Error en resetPassword:", error);
-    res.status(500).json({ error: "Error al restablecer la contraseña" });
+    console.error("Error in resetPassword:", error);
+    res.status(500).json({ error: "Error resetting password" });
   }
 };
