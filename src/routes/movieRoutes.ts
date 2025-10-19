@@ -18,7 +18,7 @@ const router = express.Router();
  * GET /api/movies
  * Get all movies (with fallback to Pexels if DB not connected)
  */
-router.get("/", authenticate, getMovies);
+router.get("/", getMovies);
 
 /**
  * GET /api/movies/explore
