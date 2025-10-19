@@ -3,7 +3,9 @@ import {
     addFavorite,
     getFavoritesByUser,
     removeFavorite,
+    updateFavoriteNote
 } from "../controllers/favoritesController";
+import { authenticate } from "../middlewares/authMiddleware";
 
 const router = Router();
 
@@ -11,18 +13,24 @@ const router = Router();
  * Favorites Routes
  * Base path: /api/favorites
  * Example endpoints:
- *   GET    /api/favorites/:userId      -> Get all favorites of a user
- *   POST   /api/favorites              -> Add new favorite
- *   DELETE /api/favorites/:userId/:contentId -> Remove favorite
+ *   GET    /api/favorites/:userId           -> Get all favorites of a user
+ *   POST   /api/favorites                   -> Add new favorite
+ *   DELETE /api/favorites/:userId/:movieId  -> Remove favorite
  */
 
-// Obtener todos los favoritos de un usuario
-router.get("/:userId", getFavoritesByUser);
+// Aplicar middleware de autenticación a todas las rutas de favoritos
+router.use(authenticate);
 
-// Agregar un nuevo favorito
+// Obtener todos los favoritos del usuario autenticado (sin necesidad de userId en URL)
+router.get("/", getFavoritesByUser);
+
+// Agregar un nuevo favorito (userId ahora viene del token)
 router.post("/", addFavorite);
 
-// Eliminar un favorito específico
-router.delete("/:userId/:contentId", removeFavorite);
+// Nueva ruta: Actualizar nota de un favorito
+router.put("/:id", updateFavoriteNote);
+
+// Eliminar un favorito específico (solo movieId en URL, userId del token)
+router.delete("/:movieId", removeFavorite);
 
 export default router;
