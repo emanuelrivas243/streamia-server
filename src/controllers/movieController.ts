@@ -90,27 +90,60 @@ export const getMovies = async (req: Request, res: Response) => {
     const isDbConnected = mongoose.connection.readyState === 1;
 
     if (isDbConnected) {
-      // 🔒 Using DB (requires Atlas credentials from Sara)
-      const movies = await Movie.find()
+      // 🔒 Buscar películas en MongoDB
+      let movies = await Movie.find()
         .sort({ createdAt: -1 })
         .limit(100)
         .lean();
+
+
+      if (movies.length === 0) {
+        console.log("🆕 No movies found in DB. Fetching from Pexels...");
+        const externalMovies = await fetchPopularFromPexels(10);
+
+        for (const movie of externalMovies) {
+          const exists = await Movie.findOne({ externalId: movie.externalId });
+          if (!exists) {
+            await Movie.create(movie);
+          }
+        }
+
+        // Recargar después de guardar
+        movies = await Movie.find()
+          .sort({ createdAt: -1 })
+          .limit(100)
+          .lean();
+      }
+
       return res.json({ source: "db", data: movies });
     }
 
-    // Fallback to external API
-    if (!pexelsClient)
+    // Si no hay conexión a Mongo, se usa Pexels directamente
+    if (!pexelsClient) {
       return res
         .status(503)
         .json({ error: "External video service unavailable (missing API key)" });
+    }
 
     const movies = await fetchPopularFromPexels(6);
+
+    // Guardar datos
+    if (mongoose.connection.readyState === 1) {
+      for (const movie of movies) {
+        const exists = await Movie.findOne({ externalId: movie.externalId });
+        if (!exists) {
+          await Movie.create(movie);
+        }
+      }
+    }
+
     return res.json({ source: "pexels", data: movies });
   } catch (err) {
-    console.error("getMovies error:", err);
+    console.error("❌ getMovies error:", err);
     return res.status(500).json({ error: "Failed to fetch movies" });
   }
 };
+
 
 /**
  * GET /api/movies/external/popular
@@ -280,5 +313,45 @@ export const exploreMovies = async (req: Request, res: Response): Promise<Respon
     return res.status(500).json({ 
       message: "Failed to load movies, please try again later"
     });
+  }
+};
+
+/**
+ * PUT /api/movies/:id
+ * Update a movie by ID
+ */
+export const updateMovie = async (req: Request, res: Response) => {
+  try {
+    const movie = await Movie.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+
+    if (!movie) {
+      return res.status(404).json({ error: "Movie not found" });
+    }
+
+    return res.json({ message: "Movie updated successfully", data: movie });
+  } catch (err) {
+    console.error("❌ Error updating movie:", err);
+    return res.status(500).json({ error: "Failed to update movie" });
+  }
+};
+
+/**
+ * DELETE /api/movies/:id
+ * Delete a movie by ID
+ */
+export const deleteMovie = async (req: Request, res: Response) => {
+  try {
+    const movie = await Movie.findByIdAndDelete(req.params.id);
+
+    if (!movie) {
+      return res.status(404).json({ error: "Movie not found" });
+    }
+
+    return res.json({ message: "Movie deleted successfully" });
+  } catch (err) {
+    console.error("❌ Error deleting movie:", err);
+    return res.status(500).json({ error: "Failed to delete movie" });
   }
 };
