@@ -6,6 +6,7 @@ import {
     getMovies
 } from "../controllers/movieController";
 import { authenticate } from "../middlewares/authMiddleware";
+import { updateMovie, deleteMovie } from "../controllers/movieController";
 
 const router = express.Router();
 
@@ -38,5 +39,17 @@ router.get("/:id", authenticate, getMovieById);
  * Get popular videos from Pexels (public endpoint for testing)
  */
 router.get("/external/popular", getExternalPopular);
+
+/**
+ * PUT /api/movies/:id with TOKEN
+ * Edit an existing movie local DB only 
+ */
+router.put("/:id", authenticate, updateMovie);
+
+/**
+ * DELETE /api/movies/:id TOKEN
+ * Remove a movie from MongoDB local deletion only
+ */
+router.delete("/:id", authenticate, deleteMovie);
 
 export default router;
