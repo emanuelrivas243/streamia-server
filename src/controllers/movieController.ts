@@ -186,3 +186,99 @@ export const getMovieById = async (req: Request, res: Response) => {
     return res.status(500).json({ error: "Failed to get movie" });
   }
 };
+/**
+ * GET /api/movies/explore
+ * Enhanced movie exploration with filtering and search
+ * @route GET /api/movies/explore
+ * @access Private
+ * @param {string} req.query.category - Filter by category
+ * @param {string} req.query.search - Search by title
+ * @returns {Object} Filtered and searched movies
+ */
+export const exploreMovies = async (req: Request, res: Response): Promise<Response> => {
+  try {
+    const { category, search } = req.query;
+    const isDbConnected = mongoose.connection.readyState === 1;
+
+    // Build filter object
+    const filter: any = {};
+
+    if (category) {
+      filter.category = { $regex: category, $options: 'i' }; // Case-insensitive
+    }
+
+    if (search) {
+      filter.title = { $regex: search, $options: 'i' }; // Case-insensitive search
+    }
+
+    if (isDbConnected) {
+      // 🔒 Using DB with filters
+      const movies = await Movie.find(filter)
+        .sort({ createdAt: -1 })
+        .limit(100)
+        .lean();
+
+      // Handle no results
+      if (movies.length === 0) {
+        return res.status(200).json({
+          message: search ? "No movies found matching your search" : "No movies available",
+          data: [],
+          filters: { category, search }
+        });
+      }
+
+      return res.json({
+        source: "db",
+        data: movies,
+        filters: { category, search },
+        total: movies.length
+      });
+    }
+
+    // Fallback to external API with client-side filtering
+    if (!pexelsClient) {
+      return res.status(503).json({ 
+        error: "External video service unavailable (missing API key)",
+        message: "Failed to load movies, please try again later"
+      });
+    }
+
+    const movies = await fetchPopularFromPexels(20);
+    
+    // Client-side filtering for external API
+    let filteredMovies = movies;
+    if (search) {
+      filteredMovies = filteredMovies.filter((movie: any) =>
+        movie.title.toLowerCase().includes((search as string).toLowerCase())
+      );
+    }
+    
+    if (category) {
+      filteredMovies = filteredMovies.filter((movie: any) =>
+        movie.category?.toLowerCase().includes((category as string).toLowerCase())
+      );
+    }
+
+    // Handle no results for external API
+    if (filteredMovies.length === 0) {
+      return res.status(200).json({
+        message: search ? "No movies found matching your search" : "No movies available in this category",
+        data: [],
+        filters: { category, search }
+      });
+    }
+
+    return res.json({
+      source: "pexels",
+      data: filteredMovies,
+      filters: { category, search },
+      total: filteredMovies.length
+    });
+
+  } catch (error) {
+    console.error("❌ Error exploring movies:", error);
+    return res.status(500).json({ 
+      message: "Failed to load movies, please try again later"
+    });
+  }
+};

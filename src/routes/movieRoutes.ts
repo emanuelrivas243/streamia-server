@@ -1,5 +1,10 @@
 import express from "express";
-import { getExternalPopular, getMovieById, getMovies } from "../controllers/movieController";
+import {
+    exploreMovies,
+    getExternalPopular,
+    getMovieById,
+    getMovies
+} from "../controllers/movieController";
 import { authenticate } from "../middlewares/authMiddleware";
 
 const router = express.Router();
@@ -13,6 +18,14 @@ const router = express.Router();
  * Get all movies (with fallback to Pexels if DB not connected)
  */
 router.get("/", authenticate, getMovies);
+
+/**
+ * GET /api/movies/explore
+ * Enhanced movie exploration with filtering and search
+ * Supports query parameters: ?category=action&search=matrix
+ */
+router.get("/explore", authenticate, exploreMovies);
+
 
 /**
  * GET /api/movies/:id
