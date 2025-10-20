@@ -8,6 +8,7 @@ import {
     registerUser,
     resetPassword,
     updateUserProfile,
+    changePassword
 } from "../controllers/userController";
 import { authenticate } from "../middlewares/authMiddleware";
 import { loginLimiter } from "../middlewares/rateLimitMiddleware";
@@ -69,5 +70,10 @@ router.put("/me", authenticate, updateUserProfile);
  * Delete current user account
  */
 router.delete("/me", authenticate, deleteUserAccount);
+
+/**
+ * PUT /api/users/change-password
+ */
+router.put("/change-password", authenticate, changePassword);
 
 export default router;

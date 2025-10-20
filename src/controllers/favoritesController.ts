@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import Favorite from "../models/Favorites";
+import { createClient } from "pexels";
 
 /**
  * @file Favorites Controller
@@ -13,28 +14,49 @@ import Favorite from "../models/Favorites";
  * @access Private
  * @returns {Object[]} List of user's favorite items.
  */
-export const getFavoritesByUser = async (req: Request, res: Response): Promise<Response> => {
+export const getFavoritesByUser = async (req: Request, res: Response) => {
   try {
-    const userId = req.userId;
-    
-    if (!userId) {
-      return res.status(401).json({ message: "User not authenticated" });
-    }
-
+    const userId = req.userId as string;
     const favorites = await Favorite.find({ userId });
-  
-    if (favorites.length === 0) {
-      return res.status(200).json({ 
-        message: "You don't have any favorite movies yet",
-        favorites: []
-      });
-    }  
-    return res.json(favorites);
+
+    const client = createClient(process.env.PEXELS_API_KEY as string);
+
+    const favoritesWithData = await Promise.all(
+      favorites.map(async fav => {
+        try {
+          // ✅ Llamamos con el id tal como está (sin Number)
+          const video = await client.videos.show({ id: fav.movieId });
+
+          return {
+            movieId: fav.movieId,
+            note: fav.note,
+            title: video?.user?.name || fav.title,
+            poster: video?.image || fav.poster,
+            videoUrl: video?.video_files?.[0]?.link || ""
+          };
+        } catch (err) {
+          console.error(`❌ Error fetching video ${fav.movieId}:`, err);
+          // Si falla Pexels para uno, devolvemos lo de la DB
+          return {
+            movieId: fav.movieId,
+            note: fav.note,
+            title: fav.title,
+            poster: fav.poster,
+            videoUrl: ""
+          };
+        }
+      })
+    );
+
+    return res.json(favoritesWithData);
   } catch (error) {
     console.error("❌ Error fetching favorites:", error);
-    return res.status(500).json({ message: "Failed to load your favorites, please try again later" });
+    return res.status(500).json({ message: "Error fetching favorites" });
   }
 };
+
+
+
 
 /**
  * Add a new favorite for the authenticated user.
