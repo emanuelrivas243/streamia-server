@@ -464,3 +464,62 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
     res.status(500).json({ error: "Error resetting password" });
   }
 };
+
+
+/**
+ * Changes the authenticated user's password.
+ * PUT /api/users/change-password
+ *
+ * Requires authentication. The `req.userId` must come from your auth middleware.
+ *
+ * @param {Request} req - Express request object. The `req.body` should include:
+ *   - currentPassword {string} - The user's existing password.
+ *   - newPassword {string} - The new password to set.
+ * @param {Response} res - Express response object.
+ *
+ * @returns {Promise<void>} Sends a success message or an error message.
+ *
+ * @throws {400} If data is missing or current password is incorrect.
+ * @throws {401} If the user is not authenticated.
+ * @throws {404} If the user does not exist.
+ * @throws {500} Internal server error.
+ */
+
+export const changePassword = async (req: Request, res: Response): Promise<void> => {
+  try {
+    if (!req.userId) {
+      res.status(401).json({ error: "Unauthorized" });
+      return;
+    }
+
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      res.status(400).json({ error: "Current and new password are required." });
+      return;
+    }
+
+    // Find user and include password
+    const user = await User.findById(req.userId).select("+password");
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    // Compare current password
+    const isMatch = await bcryptjs.compare(currentPassword, user.password);
+    if (!isMatch) {
+      res.status(400).json({ error: "Incorrect current password" });
+      return;
+    }
+
+    // Hash and update new password
+    user.password = await bcryptjs.hash(newPassword, 10);
+    await user.save();
+
+    res.status(200).json({ message: "Password changed successfully" });
+  } catch (error) {
+    console.error("❌ Error in changePassword:", error);
+    res.status(500).json({ error: "Failed to change password" });
+  }
+};
