@@ -130,7 +130,7 @@ export const uploadMovie = async (req: Request, res: Response) => {
       videoUrl: uploadResult.secure_url,
       cloudinaryPublicId: uploadResult.public_id,
       videoFormat: uploadResult.format,
-      hasAudio: true, // All uploaded videos will have audio
+      hasAudio: true,
       duration: Math.round(uploadResult.duration),
       provider: 'cloudinary'
     };
@@ -143,7 +143,7 @@ export const uploadMovie = async (req: Request, res: Response) => {
 
     console.log("✅ Video uploaded successfully:", movie.title);
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Movie uploaded successfully",
       data: movie
     });
@@ -156,12 +156,13 @@ export const uploadMovie = async (req: Request, res: Response) => {
       fs.unlinkSync(req.file.path);
     }
 
-    res.status(500).json({ 
+    return res.status(500).json({ 
       error: "Error uploading movie",
       details: error instanceof Error ? error.message : "Unknown error"
     });
   }
 };
+
 
 /**
  * Upload subtitles for a movie
@@ -215,25 +216,25 @@ export const uploadSubtitles = async (req: Request, res: Response) => {
 
     console.log("✅ Subtitles added for:", movie.title);
 
-    res.json({
+    return res.json({
       message: "Subtitles uploaded successfully",
       data: movie.subtitles
     });
   } catch (error) {
     console.error("❌ Error uploading subtitles:", error);
     
-    // Clean temporary file in case of error
     if (req.file) {
       const fs = await import('fs');
       fs.unlinkSync(req.file.path);
     }
 
-    res.status(500).json({ 
+    return res.status(500).json({ 
       error: "Error uploading subtitles",
       details: error instanceof Error ? error.message : "Unknown error"
     });
   }
 };
+
 
 /**
  * Get all movies from database (Cloudinary)
