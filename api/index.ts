@@ -93,17 +93,22 @@ app.get("/", (req: Request, res: Response) => {
  * @route GET /api/cloudinary/status
  * @description Check Cloudinary connection status
  */
-app.get("/api/cloudinary/status", async (req: Request, res: Response) => {
+/**
+ * Cloudinary health check endpoint
+ * @route GET /api/cloudinary/status
+ * @description Check Cloudinary connection status
+ */
+app.get("/api/cloudinary/status", async (req: Request, res: Response): Promise<void> => {
   try {
-    // Verificar que las variables de entorno estén configuradas
     const { CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY } = process.env;
-    
+
     if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_API_KEY) {
-      return res.status(503).json({
+      res.status(503).json({
         status: "error",
         message: "Cloudinary configuration missing",
-        configured: false
+        configured: false,
       });
+      return; // ✅ evita el error de TypeScript
     }
 
     res.json({
@@ -111,16 +116,17 @@ app.get("/api/cloudinary/status", async (req: Request, res: Response) => {
       message: "Cloudinary is configured and ready",
       configured: true,
       cloudName: CLOUDINARY_CLOUD_NAME,
-      hasApiKey: !!CLOUDINARY_API_KEY
+      hasApiKey: !!CLOUDINARY_API_KEY,
     });
   } catch (error) {
     console.error("❌ Cloudinary status check error:", error);
     res.status(500).json({
       status: "error",
-      message: "Error checking Cloudinary status"
+      message: "Error checking Cloudinary status",
     });
   }
 });
+
 
 /**
  * Catch-all route for undefined endpoints.
