@@ -5,6 +5,7 @@ import { connectDB } from "../src/config/db";
 import { apiLimiter } from "../src/middlewares/rateLimitMiddleware";
 import favoritesRoutes from "../src/routes/favoritesRoutes";
 import movieRoutes from "../src/routes/movieRoutes";
+import ratingsRoutes from "../src/routes/ratingsRoutes";
 import userRoutes from "../src/routes/userRoutes";
 
 /**
@@ -67,7 +68,7 @@ app.use(apiLimiter); // Apply rate limit globally
 app.use("/api/users", userRoutes);
 app.use("/api/movies", movieRoutes);
 app.use("/api/favorites", favoritesRoutes);
-
+app.use("/api/ratings", ratingsRoutes);
 /**
  * Health check endpoint
  * @route GET /
