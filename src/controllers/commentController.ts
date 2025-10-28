@@ -7,8 +7,15 @@ import { Request, Response } from "express";
 import Comment from "../models/Comment";
 
 /**
- * Crear un nuevo comentario
- * POST /api/comments
+ * Create a new comment
+ * @async
+ * @function createComment
+ * @route POST /api/comments
+ * @access Private
+ * @param {Request} req - Express request object, expects `movieId` and `text` in body
+ * @param {Response} res - Express response object
+ * @returns {Promise<Response>} JSON response with created comment
+ * @throws {Error} If validation or database operation fails
  */
 export const createComment = async (req: Request, res: Response) => {
   try {
@@ -31,8 +38,15 @@ export const createComment = async (req: Request, res: Response) => {
 };
 
 /**
- * Obtener todos los comentarios de una película
- * GET /api/comments/:movieId
+ * Get all comments for a specific movie
+ * @async
+ * @function getCommentsByMovie
+ * @route GET /api/comments/:movieId
+ * @access Public
+ * @param {Request} req - Express request object, expects `movieId` in params
+ * @param {Response} res - Express response object
+ * @returns {Promise<Response>} JSON array of comments for the movie
+ * @throws {Error} If query or database operation fails
  */
 export const getCommentsByMovie = async (req: Request, res: Response) => {
   try {
@@ -52,8 +66,15 @@ export const getCommentsByMovie = async (req: Request, res: Response) => {
 };
 
 /**
- * Actualizar un comentario (solo si pertenece al usuario)
- * PUT /api/comments/:id
+ * Update a comment (only allowed for the comment’s owner)
+ * @async
+ * @function updateComment
+ * @route PUT /api/comments/:id
+ * @access Private
+ * @param {Request} req - Express request object, expects `id` param and `text` in body
+ * @param {Response} res - Express response object
+ * @returns {Promise<Response>} JSON response with updated comment
+ * @throws {Error} If comment not found or user not authorized
  */
 export const updateComment = async (req: Request, res: Response) => {
   try {
@@ -84,8 +105,15 @@ export const updateComment = async (req: Request, res: Response) => {
 };
 
 /**
- * Eliminar un comentario (solo si pertenece al usuario)
- * DELETE /api/comments/:id
+ * Delete a comment (only allowed for the comment’s owner)
+ * @async
+ * @function deleteComment
+ * @route DELETE /api/comments/:id
+ * @access Private
+ * @param {Request} req - Express request object, expects `id` param
+ * @param {Response} res - Express response object
+ * @returns {Promise<Response>} JSON response with success message
+ * @throws {Error} If comment not found or user not authorized
  */
 export const deleteComment = async (req: Request, res: Response) => {
   try {
@@ -111,8 +139,15 @@ export const deleteComment = async (req: Request, res: Response) => {
 };
 
 /**
- * Obtener todos los comentarios de una película (versión extendida)
- * GET /api/comments/movie/:movieId
+ * Get all comments for a movie (extended version)
+ * @async
+ * @function getCommentsByMovieId
+ * @route GET /api/comments/movie/:movieId
+ * @access Public
+ * @param {Request} req - Express request object, expects `movieId` in params
+ * @param {Response} res - Express response object
+ * @returns {Promise<Response>} JSON response with movie comments
+ * @throws {Error} If no comments found or database operation fails
  */
 export const getCommentsByMovieId = async (req: Request, res: Response) => {
   try {
