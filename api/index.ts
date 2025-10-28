@@ -3,6 +3,7 @@ import "dotenv/config";
 import express, { Request, Response } from "express";
 import { connectDB } from "../src/config/db";
 import { apiLimiter } from "../src/middlewares/rateLimitMiddleware";
+import commentRoutes from "../src/routes/commentRoutes";
 import favoritesRoutes from "../src/routes/favoritesRoutes";
 import movieRoutes from "../src/routes/movieRoutes";
 import ratingsRoutes from "../src/routes/ratingsRoutes";
@@ -69,6 +70,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/movies", movieRoutes);
 app.use("/api/favorites", favoritesRoutes);
 app.use("/api/ratings", ratingsRoutes);
+app.use("/api/comments", commentRoutes);
 
 /**
  * Health check endpoint
