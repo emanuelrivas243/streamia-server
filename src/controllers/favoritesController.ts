@@ -1,47 +1,76 @@
-import { Request, Response } from "express";
-import Favorite from "../models/Favorites";
-import { createClient } from "pexels";
-
 /**
- * @file Favorites Controller
- * @description Handles CRUD operations for user favorites.
- * Includes endpoints for retrieving, adding, updating and deleting favorite items.
+ * @file favoritesController.ts
+ * @description Controller for managing user favorite movies.
+ * Handles CRUD operations for user favorites with Cloudinary integration.
+ * @author Streamia Team
+ * @version 1.0.0
+ * @created 2025-10-26
+ * 
+ * @module Controllers/Favorites
  */
 
+import { Request, Response } from "express";
+import Favorite from "../models/Favorites";
+import Movie from "../models/Movie";
+
 /**
- * Get all favorites for the authenticated user.
+ * Get all favorites for the authenticated user with complete movie data
+ * @async
+ * @function getFavoritesByUser
  * @route GET /api/favorites
  * @access Private
- * @returns {Object[]} List of user's favorite items.
+ * @param {Request} req - Express request object
+ * @param {Response} res - Express response object
+ * @returns {Promise<Response>} JSON response with user's favorites
+ * @throws {Error} If database query fails
  */
 export const getFavoritesByUser = async (req: Request, res: Response) => {
   try {
     const userId = req.userId as string;
     const favorites = await Favorite.find({ userId });
 
-    const client = createClient(process.env.PEXELS_API_KEY as string);
-
     const favoritesWithData = await Promise.all(
       favorites.map(async fav => {
         try {
-          // ✅ Llamamos con el id tal como está (sin Number)
-          const video = await client.videos.show({ id: fav.movieId });
+          // Search in our Cloudinary database
+          let movie = await Movie.findOne({ 
+            $or: [
+              { _id: fav.movieId },
+              { cloudinaryPublicId: fav.movieId },
+              { externalId: fav.movieId }
+            ]
+          });
+
+          // If movie not found, return basic favorite data
+          if (!movie) {
+            return {
+              movieId: fav.movieId,
+              note: fav.note,
+              title: fav.title || "Movie not available",
+              poster: fav.poster || "",
+              videoUrl: ""
+            };
+          }
 
           return {
-            movieId: fav.movieId,
+            movieId: movie._id.toString(),
             note: fav.note,
-            title: video?.user?.name || fav.title,
-            poster: video?.image || fav.poster,
-            videoUrl: video?.video_files?.[0]?.link || ""
+            title: movie.title,
+            poster: movie.coverImage,
+            videoUrl: movie.videoUrl,
+            // Additional Cloudinary data
+            duration: movie.duration,
+            hasAudio: movie.hasAudio,
+            category: movie.category
           };
         } catch (err) {
-          console.error(`❌ Error fetching video ${fav.movieId}:`, err);
-          // Si falla Pexels para uno, devolvemos lo de la DB
+          console.error(`❌ Error fetching movie ${fav.movieId}:`, err);
+          // If fails, return basic DB data
           return {
             movieId: fav.movieId,
             note: fav.note,
-            title: fav.title,
-            poster: fav.poster,
+            title: fav.title || "Error loading movie",
+            poster: fav.poster || "",
             videoUrl: ""
           };
         }
@@ -55,17 +84,16 @@ export const getFavoritesByUser = async (req: Request, res: Response) => {
   }
 };
 
-
-
-
 /**
- * Add a new favorite for the authenticated user.
+ * Add a new movie to user's favorites
+ * @async
+ * @function addFavorite
  * @route POST /api/favorites
  * @access Private
- * @param {string} req.body.movieId - The ID of the movie being favorited.
- * @param {string} req.body.title - The movie title.
- * @param {string} req.body.poster - The movie poster URL.
- * @returns {Object} The created favorite document.
+ * @param {Request} req - Express request object
+ * @param {Response} res - Express response object
+ * @returns {Promise<Response>} JSON response with created favorite
+ * @throws {Error} If authentication fails or database operation fails
  */
 export const addFavorite = async (req: Request, res: Response): Promise<Response> => {
   try {
@@ -77,8 +105,27 @@ export const addFavorite = async (req: Request, res: Response): Promise<Response
     }
 
     // Validate required fields
-    if (!movieId || !title || !poster) {
-      return res.status(400).json({ message: "Missing required fields: movieId, title, poster" });
+    if (!movieId) {
+      return res.status(400).json({ message: "Missing required field: movieId" });
+    }
+
+    // Get updated movie data from our database
+    let movieTitle = title;
+    let moviePoster = poster;
+
+    if (!title || !poster) {
+      const movie = await Movie.findOne({
+        $or: [
+          { _id: movieId },
+          { cloudinaryPublicId: movieId },
+          { externalId: movieId }
+        ]
+      });
+      
+      if (movie) {
+        movieTitle = movie.title;
+        moviePoster = movie.coverImage;
+      }
     }
 
     // Prevent duplicate favorites
@@ -91,8 +138,8 @@ export const addFavorite = async (req: Request, res: Response): Promise<Response
     const newFavorite = new Favorite({
       userId,
       movieId,
-      title,
-      poster,
+      title: movieTitle || "Untitled movie",
+      poster: moviePoster || "",
       note: note || ""
     });
 
@@ -105,12 +152,15 @@ export const addFavorite = async (req: Request, res: Response): Promise<Response
 };
 
 /**
- * Update a favorite's note for the authenticated user.
+ * Update a favorite's note for the authenticated user
+ * @async
+ * @function updateFavoriteNote
  * @route PUT /api/favorites/:id
  * @access Private
- * @param {string} req.params.id - The ID of the favorite document.
- * @param {string} req.body.note - The new note content.
- * @returns {Object} The updated favorite document.
+ * @param {Request} req - Express request object
+ * @param {Response} res - Express response object
+ * @returns {Promise<Response>} JSON response with updated favorite
+ * @throws {Error} If authentication fails or favorite not found
  */
 export const updateFavoriteNote = async (req: Request, res: Response): Promise<Response> => {
   try {
@@ -147,11 +197,15 @@ export const updateFavoriteNote = async (req: Request, res: Response): Promise<R
 };
 
 /**
- * Remove a favorite for the authenticated user.
+ * Remove a movie from user's favorites
+ * @async
+ * @function removeFavorite
  * @route DELETE /api/favorites/:movieId
  * @access Private
- * @param {string} req.params.movieId - The ID of the movie to remove.
- * @returns {Object} A success message or an error message if not found.
+ * @param {Request} req - Express request object
+ * @param {Response} res - Express response object
+ * @returns {Promise<Response>} JSON response with success message
+ * @throws {Error} If authentication fails or movie not found
  */
 export const removeFavorite = async (req: Request, res: Response): Promise<Response> => {
   try {

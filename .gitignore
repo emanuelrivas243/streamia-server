@@ -1,2 +1,5 @@
 node_modules
-#.env
+.env
+dist
+test-subtitles.html
+subtitulos_weapons_en.vtt

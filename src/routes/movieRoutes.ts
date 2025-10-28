@@ -1,55 +1,87 @@
-import express from "express";
+import { Router } from 'express';
 import {
+    deleteMovie,
     exploreMovies,
-    getExternalPopular,
     getMovieById,
-    getMovies
-} from "../controllers/movieController";
-import { authenticate } from "../middlewares/authMiddleware";
-import { updateMovie, deleteMovie } from "../controllers/movieController";
+    getMovies,
+    getMovieSubtitles,
+    updateMovie,
+    upload,
+    uploadMovie,
+    uploadSubtitles
+} from '../controllers/movieController';
 
-const router = express.Router();
-
-/**
- * Protected endpoints for movies (authentication required)
- */
-
-/**
- * GET /api/movies
- * Get all movies (with fallback to Pexels if DB not connected)
- */
-router.get("/", getMovies);
+const router = Router();
 
 /**
- * GET /api/movies/explore
- * Enhanced movie exploration with filtering and search
- * Supports query parameters: ?category=action&search=matrix
+ * @route   GET /api/movies
+ * @desc    Get all movies from Cloudinary
+ * @access  Public
  */
-router.get("/explore", authenticate, exploreMovies);
-
-
-/**
- * GET /api/movies/:id
- * Get movie by ID
- */
-router.get("/:id", authenticate, getMovieById);
+router.get('/', getMovies);
 
 /**
- * GET /api/movies/external/popular
- * Get popular videos from Pexels (public endpoint for testing)
+ * @route   GET /api/movies/explore
+ * @desc    Explore movies with filters and search
+ * @access  Public
+ * @query   {string} category - Filter by category
+ * @query   {string} search - Search by title
  */
-router.get("/external/popular", getExternalPopular);
+router.get('/explore', exploreMovies);
 
 /**
- * PUT /api/movies/:id with TOKEN
- * Edit an existing movie local DB only 
+ * @route   GET /api/movies/:id
+ * @desc    Get movie by ID
+ * @access  Public
+ * @param   {string} id - Movie ID or Cloudinary Public ID
  */
-router.put("/:id", authenticate, updateMovie);
+router.get('/:id', getMovieById);
 
 /**
- * DELETE /api/movies/:id TOKEN
- * Remove a movie from MongoDB local deletion only
+ * @route   POST /api/movies/upload
+ * @desc    Upload a movie to Cloudinary
+ * @access  Private (deberías agregar middleware de autenticación después)
+ * @body    {string} title - Movie title
+ * @body    {string} description - Movie description
+ * @body    {string} category - Movie category
+ * @file    {video} video - Video file (MP4, MOV, AVI, MKV, WEBM)
  */
-router.delete("/:id", authenticate, deleteMovie);
+router.post('/upload', upload.single('video'), uploadMovie);
+
+/**
+ * @route   POST /api/movies/:id/subtitles
+ * @desc    Upload subtitles for a movie
+ * @access  Private
+ * @param   {string} id - Movie ID
+ * @body    {string} language - Language code (es, en, fr, etc.)
+ * @body    {string} label - Language label (Español, English, etc.)
+ * @file    {subtitle} subtitle - Subtitle file (VTT, SRT)
+ */
+router.post('/:id/subtitles', upload.single('subtitle'), uploadSubtitles);
+
+/**
+ * @route   GET /api/movies/:id/subtitles
+ * @desc    Get all subtitles for a movie
+ * @access  Public
+ * @param   {string} id - Movie ID
+ */
+router.get('/:id/subtitles', getMovieSubtitles);
+
+/**
+ * @route   PUT /api/movies/:id
+ * @desc    Update a movie
+ * @access  Private
+ * @param   {string} id - Movie ID
+ * @body    {Object} updates - Movie fields to update
+ */
+router.put('/:id', updateMovie);
+
+/**
+ * @route   DELETE /api/movies/:id
+ * @desc    Delete a movie
+ * @access  Private
+ * @param   {string} id - Movie ID
+ */
+router.delete('/:id', deleteMovie);
 
 export default router;
